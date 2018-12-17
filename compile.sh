@@ -1,1 +1,1 @@
-gcc -o test test.c -v && ./test
+gcc -lsecp256k1 -o test test.c && ./test
