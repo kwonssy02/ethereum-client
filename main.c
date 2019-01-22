@@ -1,10 +1,10 @@
-// #include "uECC.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
 #include "secp256k1.h"
 #include "utils.h"
 #include "RLP.h"
+#include "sha3.h"
 
 void createPrivateKey(unsigned char *privateKey) {
 	int i;
@@ -99,6 +99,7 @@ void assembleTx() {
     printf("raw transaction: %s\n", rawTx);
 }
 
+
 int main()
 {
 
@@ -126,8 +127,30 @@ int main()
 	}
 	printf("\n");
 	printf("공개키 검증: %d\n", secp256k1_ec_pubkey_negate(ctx, &publicKey));
+    printf("\n");
 
+    /* rlp */
 	assembleTx();
+    printf("\n");
+
+    /* keccak */
+    uint8_t buf[200];
+    sha3_context c;
+    const uint8_t *hash;
+    unsigned i;
+
+    sha3_HashBuffer(256, SHA3_FLAGS_KECCAK, "abc", 3, buf, sizeof(buf));
+    printCharArray(buf);
+    if(memcmp(buf, "\x4e\x03\x65\x7a\xea\x45\xa9\x4f"
+                   "\xc7\xd4\x7b\xa8\x26\xc8\xd6\x67"
+                   "\xc0\xd1\xe6\xe3\x3a\x64\xa0\x36"
+                   "\xec\x44\xf5\x8f\xa1\x2d\x6c\x45", 256 / 8) != 0) {
+        printf("SHA3-256 doesn't match known answer (single buffer)\n");
+    }else {
+        printf("SHA3-256 matches known answer (single buffer)\n");
+    }
+
+    
 	return 0;
 }
 
