@@ -100,8 +100,7 @@ void assembleTx() {
 }
 
 
-int main()
-{
+int main() {
 
 	// 60cf347dbc59d31c1358c8e5cf5e45b822ab85b79cb32a9f3d98184779a9efc2
 	// 1db455703261363e0634ffca682fa156bac083e47358b18cf8a18b4c073283f4
@@ -121,7 +120,8 @@ int main()
 	secp256k1_ec_pubkey_create(ctx, &publicKey, privateKey);
 	printf("공개키: ");
 	// printCharArray(publicKey.data);
-	int j;
+	
+    int j;
 	for(j=0; j < 64; j++) {
 		printf("%02x", publicKey.data[j]);
 	}
