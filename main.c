@@ -10,13 +10,12 @@ void createPrivateKey(unsigned char *privateKey) {
 	int i;
 	for(i=0; i < 32; i++) {
 		privateKey[i] = rand() % 256;
-		// printf("%d ", privateKey[i]);
 	}
 }
 
-void printCharArray(unsigned char *privateKey) {
+void printCharArray(unsigned char *privateKey, uint8_t length) {
 	int i;
-	for(i=0; i < 32; i++) {
+	for(i=0; i < length; i++) {
 		printf("%02x", privateKey[i]);
 	}
 	printf("\n");
@@ -102,16 +101,14 @@ void assembleTx() {
 
 int main() {
 
-	// 60cf347dbc59d31c1358c8e5cf5e45b822ab85b79cb32a9f3d98184779a9efc2
-	// 1db455703261363e0634ffca682fa156bac083e47358b18cf8a18b4c073283f4
-	// unsigned char privateKey[32] = { 96, 207, 52, 125, 188, 89, 211, 28, 19, 88, 200, 229, 207, 94, 69, 184, 34, 171, 133, 183, 156, 179, 42, 159, 61, 152, 24, 71, 121, 169, 239, 194 };
+    /* create key pair */
 	unsigned char privateKey[32];
 	static secp256k1_context *ctx = NULL;
 	srand(time(NULL));
 
 	createPrivateKey(privateKey);
 	printf("개인키: ");
-	printCharArray(privateKey);
+	printCharArray(privateKey, 32);
 	printf("개인키 검증: %d\n", secp256k1_ec_seckey_verify(ctx, privateKey));
 
 	ctx = secp256k1_context_create(SECP256K1_CONTEXT_SIGN | SECP256K1_CONTEXT_VERIFY);
@@ -119,13 +116,8 @@ int main() {
 
 	secp256k1_ec_pubkey_create(ctx, &publicKey, privateKey);
 	printf("공개키: ");
-	// printCharArray(publicKey.data);
+	printCharArray(publicKey.data, 64);
 	
-    int j;
-	for(j=0; j < 64; j++) {
-		printf("%02x", publicKey.data[j]);
-	}
-	printf("\n");
 	printf("공개키 검증: %d\n", secp256k1_ec_pubkey_negate(ctx, &publicKey));
     printf("\n");
 
@@ -134,13 +126,13 @@ int main() {
     printf("\n");
 
     /* keccak */
-    uint8_t buf[200];
+    uint8_t buf[32];
     sha3_context c;
     const uint8_t *hash;
     unsigned i;
 
     sha3_HashBuffer(256, SHA3_FLAGS_KECCAK, "abc", 3, buf, sizeof(buf));
-    printCharArray(buf);
+    printCharArray(buf, 32);
     if(memcmp(buf, "\x4e\x03\x65\x7a\xea\x45\xa9\x4f"
                    "\xc7\xd4\x7b\xa8\x26\xc8\xd6\x67"
                    "\xc0\xd1\xe6\xe3\x3a\x64\xa0\x36"
