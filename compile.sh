@@ -1,1 +1,1 @@
-gcc -lsecp256k1 main.c RLP.c utils.c sha3.c -o main  && ./main
+gcc -lsecp256k1 main.c sha3.c  -o main  && ./main

@@ -2,9 +2,21 @@
 #include <stdlib.h>
 #include <time.h>
 #include "secp256k1.h"
-#include "utils.h"
-#include "RLP.h"
+#include "RLP/RLP.c"
+#include "RLP/utils.c"
 #include "sha3.h"
+
+struct RawTxStruct {
+    const char *nonce;
+    const char *gas_price;
+    const char *gas_limit;
+    const char *to;
+    const char *value;
+    const char *data;
+    const char *r;
+    const char *s;
+    uint32_t v;
+};
 
 void createPrivateKey(unsigned char *privateKey) {
 	int i;
@@ -13,20 +25,43 @@ void createPrivateKey(unsigned char *privateKey) {
 	}
 }
 
-void printCharArray(unsigned char *privateKey, uint8_t length) {
+void printCharArray(unsigned char *array, uint8_t length) {
 	int i;
 	for(i=0; i < length; i++) {
-		printf("%02x", privateKey[i]);
+		printf("%02x", array[i]);
 	}
 	printf("\n");
 }
+
+char bytesToSecp256(char* key, char* msg, unsigned char *rs){
+    secp256k1_context *ctx;
+    secp256k1_ecdsa_signature signature;
+    
+    unsigned char rands[64];
+    unsigned int i;
+    ctx = secp256k1_context_create(SECP256K1_CONTEXT_SIGN);
+    
+    secp256k1_ecdsa_sign(ctx, &signature, msg, key, NULL, NULL);
+    
+    secp256k1_ecdsa_signature_serialize_compact(ctx, rands, &signature);
+    
+    for (i=0; i<64; i++){
+	    unsigned char *tmp;
+        // unsigned char tmp[2];
+        sprintf(tmp, "%02x", rands[i]);
+	    strcat(rs, tmp);
+	}
+    
+    secp256k1_context_destroy(ctx);
+}
+
+
 
 int wallet_ethereum_assemble_tx(EthereumSignTx *msg, EthereumSig *tx, uint64_t *rawTx) {
     EncodeEthereumSignTx new_msg;
     EncodeEthereumTxRequest new_tx;
     memset(&new_msg, 0, sizeof(new_msg));
     memset(&new_tx, 0, sizeof(new_tx));
-
     wallet_encode_element(msg->nonce.bytes, msg->nonce.size,
                           new_msg.nonce.bytes, &(new_msg.nonce.size), false);
     wallet_encode_element(msg->gas_price.bytes, msg->gas_price.size,
@@ -40,62 +75,91 @@ int wallet_ethereum_assemble_tx(EthereumSignTx *msg, EthereumSig *tx, uint64_t *
     wallet_encode_element(msg->data_initial_chunk.bytes,
                           msg->data_initial_chunk.size, new_msg.data_initial_chunk.bytes,
                           &(new_msg.data_initial_chunk.size), false);
-
     wallet_encode_int(tx->signature_v, &(new_tx.signature_v));
     wallet_encode_element(tx->signature_r.bytes, tx->signature_r.size,
                           new_tx.signature_r.bytes, &(new_tx.signature_r.size), true);
     wallet_encode_element(tx->signature_s.bytes, tx->signature_s.size,
                           new_tx.signature_s.bytes, &(new_tx.signature_s.size), true);
-
     int length = wallet_encode_list(&new_msg, &new_tx, rawTx);
+    //printf("%x",data_initial_chunk.bytes);
     return length;
 }
 
-void assembleTx() {
+int wallet_ethereum_assemble_tx_s(EthereumSignTx *msg, EthereumSig *tx, uint64_t *rawTx) {
+    EncodeEthereumSignTx new_msg;
+    EncodeEthereumTxRequest new_tx;
+    memset(&new_msg, 0, sizeof(new_msg));
+    memset(&new_tx, 0, sizeof(new_tx));
+    wallet_encode_element(msg->nonce.bytes, msg->nonce.size,
+                          new_msg.nonce.bytes, &(new_msg.nonce.size), false);
+    wallet_encode_element(msg->gas_price.bytes, msg->gas_price.size,
+                          new_msg.gas_price.bytes, &(new_msg.gas_price.size), false);
+    wallet_encode_element(msg->gas_limit.bytes, msg->gas_limit.size,
+                          new_msg.gas_limit.bytes, &(new_msg.gas_limit.size), false);
+    wallet_encode_element(msg->to.bytes, msg->to.size, new_msg.to.bytes,
+                          &(new_msg.to.size), false);
+    wallet_encode_element(msg->value.bytes, msg->value.size,
+                          new_msg.value.bytes, &(new_msg.value.size), false);
+    wallet_encode_element(msg->data_initial_chunk.bytes,
+                          msg->data_initial_chunk.size, new_msg.data_initial_chunk.bytes,
+                          &(new_msg.data_initial_chunk.size), false);
+/*
+    wallet_encode_int(tx->signature_v, &(new_tx.signature_v));
+    wallet_encode_element(tx->signature_r.bytes, tx->signature_r.size,
+                          new_tx.signature_r.bytes, &(new_tx.signature_r.size), true);
+    wallet_encode_element(tx->signature_s.bytes, tx->signature_s.size,
+                          new_tx.signature_s.bytes, &(new_tx.signature_s.size), true);
+*/
+    int length = wallet_encode_list_s(&new_msg, &new_tx, rawTx);
+    //printf("%x",data_initial_chunk.bytes);
+    return length;
+}
+
+void assembleTx(struct RawTxStruct rts, bool withRSV, char * rlpre) {
     static char rawTx[256];
     EthereumSignTx tx;
     EthereumSig signature;
     uint64_t raw_tx_bytes[24];
-    const char *nonce = "00";
-    const char *gas_price = "4a817c800";
-    const char *gas_limit = "5208";
-    const char *to = "e0defb92145fef3c3a945637705fafd3aa74a241";
-    const char *value = "de0b6b3a7640000";
-    const char *data = "00";
-    const char *r = "09ebb6ca057a0535d6186462bc0b465b561c94a295bdb0621fc19208ab149a9c";
-    const char *s = "440ffd775ce91a833ab410777204d5341a6f9fa91216a6f3ee2c051fea6a0428";
-    uint32_t v = 27;
+
+    const char *nonce = rts.nonce;
+    const char *gas_price = rts.gas_price;
+    const char *gas_limit = rts.gas_limit;
+    const char *to = rts.to;
+    const char *value = rts.value;
+    const char *data = rts.data;
+    const char *r = rts.r;
+    const char *s = rts.s;
+    uint32_t v = rts.v;
 
     tx.nonce.size = size_of_bytes(strlen(nonce));
     hex2byte_arr(nonce, strlen(nonce), tx.nonce.bytes, tx.nonce.size);
-
     tx.gas_price.size = size_of_bytes(strlen(gas_price));
     hex2byte_arr(gas_price, strlen(gas_price), tx.gas_price.bytes, tx.gas_price.size);
-
     tx.gas_limit.size = size_of_bytes(strlen(gas_limit));
     hex2byte_arr(gas_limit, strlen(gas_limit), tx.gas_limit.bytes, tx.gas_limit.size);
-
     tx.to.size = size_of_bytes(strlen(to));
     hex2byte_arr(to, strlen(to), tx.to.bytes, tx.to.size);
-
     tx.value.size = size_of_bytes(strlen(value));
     hex2byte_arr(value, strlen(value), tx.value.bytes, tx.value.size);
-
     tx.data_initial_chunk.size = size_of_bytes(strlen(data));
     hex2byte_arr(data, strlen(data), tx.data_initial_chunk.bytes,
                  tx.data_initial_chunk.size);
-
-    signature.signature_v = 27;
-
+    signature.signature_v = v;
     signature.signature_r.size = size_of_bytes(strlen(r));
     hex2byte_arr(r, strlen(r), signature.signature_r.bytes, signature.signature_r.size);
-
     signature.signature_s.size = size_of_bytes(strlen(s));
     hex2byte_arr(s, strlen(s), signature.signature_s.bytes, signature.signature_s.size);
+    int length;
 
-    int length = wallet_ethereum_assemble_tx(&tx, &signature, raw_tx_bytes);
+    if (withRSV) {    
+	    length = wallet_ethereum_assemble_tx(&tx, &signature, raw_tx_bytes);
+    } else { 
+	    length = wallet_ethereum_assemble_tx_s(&tx, &signature, raw_tx_bytes);
+    }
+    //printf("%i",raw_tx_bytes);
+    //int length = 110;
     int8_to_char((uint8_t *) raw_tx_bytes, length, rawTx);
-    printf("raw transaction: %s\n", rawTx);
+    sprintf(rlpre, "%s", rawTx);
 }
 
 
@@ -122,14 +186,52 @@ int main() {
     printf("\n");
 
     /* rlp */
-	assembleTx();
-    printf("\n");
+
+    struct RawTxStruct rts;
+	rts.nonce = "01";
+	rts.gas_price = "9184e72a000";
+	rts.gas_limit = "2710";
+	rts.to = "0000000000000000000000000000000000000009";
+	rts.value = "7";
+	rts.data = "7f";
+	rts.r = "0";
+	rts.s = "0";
+	rts.v = 15; // chainID
+    char rawTxNotSigned[200];
+
+	assembleTx(rts, true, rawTxNotSigned);
+    printf("RLP Before Signing: %s \n", rawTxNotSigned);
+    printf("strlen(RLP Before Signing): %d \n\n", strlen(rawTxNotSigned));
+    // message hash
+    uint8_t msgHashBuf[32];
+    sha3_HashBuffer(256, SHA3_FLAGS_KECCAK, rawTxNotSigned, strlen(rawTxNotSigned), msgHashBuf, sizeof(msgHashBuf));
+    printf("Message Hash: ");
+    printCharArray(msgHashBuf, 32);
+
+    // r, s 계산
+    unsigned char rs[128];
+    bytesToSecp256(privateKey, msgHashBuf, rs);
+    printf("R/S: %s\n", rs);
+
+    char r[65];
+	strncpy(r, rs, 64);
+	r[64] = 0;
+    char s[65];
+    strncpy(s, rs+64, 64);
+    s[64] = 0;
+
+    // r, s 세팅 후 RLP 계산
+    rts.r = r;
+    rts.s = s;
+    char rawTxSigned[3000];
+	assembleTx(rts, true, rawTxSigned);
+    printf("RLP After Signing: %s \n", rawTxSigned);
+    printf("strlen(RLP After Signing): %d \n", strlen(rawTxSigned));
+
 
     /* keccak */
+    /*
     uint8_t buf[32];
-    sha3_context c;
-    const uint8_t *hash;
-    unsigned i;
 
     sha3_HashBuffer(256, SHA3_FLAGS_KECCAK, "abc", 3, buf, sizeof(buf));
     printCharArray(buf, 32);
@@ -141,6 +243,7 @@ int main() {
     }else {
         printf("SHA3-256 matches known answer (single buffer)\n");
     }
+    */
 
     
 	return 0;

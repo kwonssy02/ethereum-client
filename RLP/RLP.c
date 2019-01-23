@@ -87,6 +87,73 @@ int wallet_encode_list(EncodeEthereumSignTx *new_msg, EncodeEthereumTxRequest *n
     return copyPos;
 }
 
+int wallet_encode_list_s(EncodeEthereumSignTx *new_msg, EncodeEthereumTxRequest *new_tx,
+                       uint64_t *rawTx) {
+    uint32_t totalLength = 0;
+    uint8_t *data;
+
+    totalLength += new_msg->nonce.size;
+    totalLength += new_msg->gas_price.size;
+    totalLength += new_msg->gas_limit.size;
+    totalLength += new_msg->to.size;
+    totalLength += new_msg->value.size;
+    totalLength += new_msg->data_initial_chunk.size;
+
+//    totalLength += 1; //tx->signature_v.size
+    totalLength += new_tx->signature_r.size;
+    totalLength += new_tx->signature_s.size;
+
+    int copyPos;
+    if (totalLength < SIZE_THRESHOLD) {
+        data = malloc(1 + totalLength);
+        data[0] = (int8_t) (OFFSET_SHORT_LIST + totalLength);
+        copyPos = 1;
+    } else {
+        int tmpLength = totalLength;
+        uint8_t byteNum = 0;
+        while (tmpLength != 0) {
+            ++byteNum;
+            tmpLength = tmpLength >> 8;
+        }
+        tmpLength = totalLength;
+        uint8_t *lenBytes;
+        lenBytes = malloc(byteNum);
+        int i;
+        for (i = 0; i < byteNum; ++i) {
+            lenBytes[byteNum - 1 - i] =
+                    (uint8_t) ((tmpLength >> (8 * i)) & 0xFF);
+        }
+        data = malloc(1 + byteNum + totalLength);
+        data[0] = (uint8_t) (OFFSET_LONG_LIST + byteNum);
+        memcpy(data + 1, lenBytes, byteNum);
+        copyPos = byteNum + 1;
+        free(lenBytes);
+    }
+
+    copyPos = wallet_copy_rpl(data + copyPos, new_msg->nonce.bytes,
+                              new_msg->nonce.size, copyPos);
+    copyPos = wallet_copy_rpl(data + copyPos, new_msg->gas_price.bytes,
+                              new_msg->gas_price.size, copyPos);
+    copyPos = wallet_copy_rpl(data + copyPos, new_msg->gas_limit.bytes,
+                              new_msg->gas_limit.size, copyPos);
+    copyPos = wallet_copy_rpl(data + copyPos, new_msg->to.bytes,
+                              new_msg->to.size, copyPos);
+    copyPos = wallet_copy_rpl(data + copyPos, new_msg->value.bytes,
+                              new_msg->value.size, copyPos);
+
+    copyPos = wallet_copy_rpl(data + copyPos, new_msg->data_initial_chunk.bytes,
+                              new_msg->data_initial_chunk.size, copyPos);
+/*
+    copyPos = wallet_copy_rpl(data + copyPos, &new_tx->signature_v, 1, copyPos);
+    copyPos = wallet_copy_rpl(data + copyPos, new_tx->signature_r.bytes,
+                              new_tx->signature_r.size, copyPos);
+    copyPos = wallet_copy_rpl(data + copyPos, new_tx->signature_s.bytes,
+                              new_tx->signature_s.size, copyPos);
+*/
+    memcpy(rawTx, data, copyPos);
+    return copyPos;
+}
+
 void wallet_encode_element(pb_byte_t *bytes, pb_size_t size,
                            pb_byte_t *new_bytes, pb_size_t *new_size, bool remove_leading_zeros) {
 
