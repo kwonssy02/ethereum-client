@@ -162,29 +162,49 @@ void assembleTx(struct RawTxStruct rts, bool withRSV, char * rlpre) {
     sprintf(rlpre, "%s", rawTx);
 }
 
-
-int main() {
-
+void keyPairTest() {
     /* create key pair */
+    // f4259e890d999a567d9709181401364e93ce2b1deceed603700b5bdb9c0044a3
+    // da48faca2e0632ec4df6ad941521aab6dcbca70df3b88b517eef603275602f4f
+    // 주소: 0xEEC267C64d2d4b036075E426DC34429cBb9501a4
 	unsigned char privateKey[32];
+    unsigned char *pk = "f4259e890d999a567d9709181401364e93ce2b1deceed603700b5bdb9c0044a3";
+    hex2byte_arr(pk, 64, privateKey, 32);
 	static secp256k1_context *ctx = NULL;
 	srand(time(NULL));
 
-	createPrivateKey(privateKey);
+	// createPrivateKey(privateKey);
 	printf("개인키: ");
 	printCharArray(privateKey, 32);
-	printf("개인키 검증: %d\n", secp256k1_ec_seckey_verify(ctx, privateKey));
+	// printf("개인키 검증: %d\n", secp256k1_ec_seckey_verify(ctx, privateKey));
 
 	ctx = secp256k1_context_create(SECP256K1_CONTEXT_SIGN | SECP256K1_CONTEXT_VERIFY);
 	secp256k1_pubkey publicKey;
 
 	secp256k1_ec_pubkey_create(ctx, &publicKey, privateKey);
+    unsigned char pub[65];
+    unsigned char finalpub[64];
+    size_t clen = 65;
+    secp256k1_ec_pubkey_serialize(ctx, &pub, &clen, &publicKey, SECP256K1_EC_UNCOMPRESSED);
+    strncpy(finalpub, pub+1, 64);
+    
 	printf("공개키: ");
-	printCharArray(publicKey.data, 64);
-	
-	printf("공개키 검증: %d\n", secp256k1_ec_pubkey_negate(ctx, &publicKey));
-    printf("\n");
+	printCharArray(finalpub, 64);
+	// printf("공개키 검증: %d\n", secp256k1_ec_pubkey_negate(ctx, &publicKey));
 
+    // 주소값 생성
+    uint8_t buf[32];
+
+    sha3_HashBuffer(256, SHA3_FLAGS_KECCAK, &finalpub, 64, buf, sizeof(buf));
+    unsigned char address[20];
+    strncpy(address, buf+12, 20);
+    printf("주소값: ");
+    printCharArray(address, 20);
+
+}
+
+void rlpTest() {
+    unsigned char privateKey[32];
     /* rlp */
 
     struct RawTxStruct rts;
@@ -227,6 +247,17 @@ int main() {
 	assembleTx(rts, true, rawTxSigned);
     printf("RLP After Signing: %s \n", rawTxSigned);
     printf("strlen(RLP After Signing): %d \n", strlen(rawTxSigned));
+
+}
+
+int main() {
+    keyPairTest();
+    
+    return 0;    
+
+
+
+    
 
 
     /* keccak */
