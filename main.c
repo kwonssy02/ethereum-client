@@ -163,17 +163,18 @@ void assembleTx(struct RawTxStruct rts, bool withRSV, char * rlpre) {
 }
 
 void keyPairTest() {
+    static secp256k1_context *ctx = NULL;
+	srand(time(NULL));
+
     /* create key pair */
     // f4259e890d999a567d9709181401364e93ce2b1deceed603700b5bdb9c0044a3
     // da48faca2e0632ec4df6ad941521aab6dcbca70df3b88b517eef603275602f4f
     // 주소: 0xEEC267C64d2d4b036075E426DC34429cBb9501a4
 	unsigned char privateKey[32];
     unsigned char *pk = "f4259e890d999a567d9709181401364e93ce2b1deceed603700b5bdb9c0044a3";
-    hex2byte_arr(pk, 64, privateKey, 32);
-	static secp256k1_context *ctx = NULL;
-	srand(time(NULL));
+    // hex2byte_arr(pk, 64, privateKey, 32);
+	createPrivateKey(privateKey);
 
-	// createPrivateKey(privateKey);
 	printf("개인키: ");
 	printCharArray(privateKey, 32);
 	// printf("개인키 검증: %d\n", secp256k1_ec_seckey_verify(ctx, privateKey));
