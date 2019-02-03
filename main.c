@@ -197,7 +197,7 @@ void rlpTest() {
 	rts.gas_price = "9184e72a000";
 	rts.gas_limit = "2710";
 	rts.to = "eec267c64d2d4b036075e426dc34429cbb9501a4";
-	rts.value = "1700";
+	rts.value = "17";
 	rts.data = "7f";
 	rts.r = "0";
 	rts.s = "0";
