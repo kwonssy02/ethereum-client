@@ -197,7 +197,7 @@ void rlpTest() {
 	rts.gas_price = "9184e72a000";
 	rts.gas_limit = "2710";
 	rts.to = "eec267c64d2d4b036075e426dc34429cbb9501a4";
-	rts.value = "17";
+	rts.value = "1700";
 	rts.data = "7f";
 	rts.r = "0";
 	rts.s = "0";
@@ -259,30 +259,9 @@ void rlpTest() {
 }
 
 int main() {
+    
     keyPairTest();
     rlpTest();
-    return 0;    
-
-
-
-    
-
-
-    /* keccak */
-    /*
-    uint8_t buf[32];
-
-    sha3_HashBuffer(256, SHA3_FLAGS_KECCAK, "abc", 3, buf, sizeof(buf));
-    printCharArray(buf, 32);
-    if(memcmp(buf, "\x4e\x03\x65\x7a\xea\x45\xa9\x4f"
-                   "\xc7\xd4\x7b\xa8\x26\xc8\xd6\x67"
-                   "\xc0\xd1\xe6\xe3\x3a\x64\xa0\x36"
-                   "\xec\x44\xf5\x8f\xa1\x2d\x6c\x45", 256 / 8) != 0) {
-        printf("SHA3-256 doesn't match known answer (single buffer)\n");
-    }else {
-        printf("SHA3-256 matches known answer (single buffer)\n");
-    }
-    */
 
 	return 0;
 }
