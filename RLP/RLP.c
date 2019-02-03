@@ -99,7 +99,7 @@ int wallet_encode_list_s(EncodeEthereumSignTx *new_msg, EncodeEthereumTxRequest 
     totalLength += new_msg->value.size;
     totalLength += new_msg->data_initial_chunk.size;
 
-//    totalLength += 1; //tx->signature_v.size
+    // totalLength += 1; //tx->signature_v.size
     totalLength += new_tx->signature_r.size;
     totalLength += new_tx->signature_s.size;
 
